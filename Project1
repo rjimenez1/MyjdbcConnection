@@ -1,0 +1,247 @@
+# MyjdbcConnection
+
+    //***********************************************************
+    //                       Execute.java                       *
+    //***********************************************************
+    //   Written by Raul Jimenez for Computer Science 455.      *
+    //***********************************************************
+    //  This program uses JDBC to show the store information,   *
+    //  updating the product availability, and to find the      *
+    //  products that are available or not available in the     *
+    //  stores the Workers database.                            *
+    //***********************************************************
+
+    import java.util.*;
+
+    public class Execute {
+
+        // Open the database and process a sequence of commands.
+        public static void main(String[] args) {
+            Scanner kbd = new Scanner(System.in);
+            DBase db = new DBase(null, null);
+            String cmd;
+
+            if (!db.isOpen()) {
+                System.out.printf("Could not connect to database.%n");
+                System.exit(1);
+            }
+            cmd = showMenu(kbd);
+            while (!cmd.equals("4")) {
+                if (cmd.equals("1")) db.doFind(kbd);
+                if (cmd.equals("2")) db.doUpdate(kbd);
+                if (cmd.equals("3")) db.showStoreInfo();
+                cmd = showMenu(kbd);
+            }
+            db.close();
+        }
+
+        // Display the menu and read the next command.
+        public static String showMenu(Scanner kbd) {
+            System.out.printf("%n");
+            System.out.printf("1:  Find out if the products are in the store or not.%n");
+            System.out.printf("2:  Update Product availability.%n");
+            System.out.printf("3:  Show store information.%n");
+            System.out.printf("4:  Exit.%n");
+            System.out.printf("%n");
+            System.out.printf("Command? ");
+            return kbd.next();
+        }
+    }
+ 
+ 
+--------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+ 
+     //************************************************************
+     //                         DBase.java                        *
+     //************************************************************
+     //  This class uses JDBC to communicate with a JavaDB        *
+     //  database of employee data.  The constructor connects     *
+     //  to the database.  The doFind method displays all         *
+     //  Stores having the specified In_stock value. The doUpdate *
+     //  method updates the availability of the product. The      *
+     //  showStoreInfo method performs a SELECT query and         *
+     //  displays the results.                                    *
+     //************************************************************
+
+     import java.sql.*;
+     import java.util.*;
+
+     public class DBase {
+         private Connection conn;
+         private boolean isopen;
+
+         // Attempt to connect to the JavaDB Store database.
+         public DBase(String uname, String pword) {
+             try {
+                 Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
+                 conn = DriverManager.getConnection(
+                     "jdbc:derby:Store", uname, pword);
+             } catch (Exception e) {conn = null;}
+             isopen = (conn != null);
+         }
+
+         // Test whether the database is open.
+         public boolean isOpen() {return isopen;}
+
+         // Close the database connection.
+         public void close() {
+             if (!isopen) return;
+             try {conn.close();}
+             catch (Exception e) {}
+             isopen = false;
+             conn = null;
+         }
+
+         // Perform a SELECT query and show the results.
+         public void showStoreInfo() {
+             PreparedStatement stmt = null;
+             ResultSet rset = null;
+             ResultSetMetaData meta = null;
+             String sql, label, Store, Maname, MaLname, City, State, Product, first;
+             int id, ncols, col;
+
+             // Return if the database is closed.
+             if (!isopen) return;
+
+             try {
+
+                 // Create a PreparedStatement for the query.
+                 sql = "Select Store.ID, Store.Sname, " +
+                    "Store.MaName, Store.MaLname, " + "Supplier.City, Supplier.State, " +
+                    "Product.Pname, Product.In_stock " + "FROM Store " + 
+                    "INNER JOIN Supplier ON Store.Supplier = Supplier.ID " +
+                    "INNER JOIN Info ON Store.ID = Info.Store " +
+                    "INNER JOIN Product ON Product.ID = Info.Product";
+                
+                 stmt = conn.prepareStatement(sql);
+
+                 // Execute the query and obtain the result set.
+                 rset = stmt.executeQuery();
+
+                 // Use the metadata to print the column headings.
+                 meta = rset.getMetaData();
+                 ncols = meta.getColumnCount();
+                 for (col = 1; col <= ncols; ++col) {
+                     label = meta.getColumnName(col);
+                     System.out.printf("%-15s ", label);
+                 }
+                 System.out.printf("%n");
+
+                 // Process each row in a loop.
+                 while (rset.next()) {
+                     id = rset.getInt(1);
+                     Store = rset.getString(2);
+                     Maname = rset.getString(3);
+                     MaLname = rset.getString(4);
+                     City = rset.getString(5);
+                     State = rset.getString(6);
+                     Product = rset.getString(7);
+                     first = rset.getString(8);
+                     System.out.printf("%-11d  %-17s  %-14s  %-12s  %-15s  %-14s  %-18s  %-12s%n",
+                         id, Store, Maname, MaLname, City, State, Product, first);
+                 }
+
+             } catch (Exception e) {
+                 System.out.printf("%s%n", e.getMessage());
+             }
+
+             // Close the query statement and return.
+             try {stmt.close();}
+             catch (Exception e) {}
+         }
+         
+         // Display all employees having a specified name.
+         public void doFind(Scanner kbd) {
+             PreparedStatement stmt = null;
+             ResultSet rset = null;
+             String sql, Store, Maname, MaLname, City, State, Product, first;
+             int id;
+
+             // Return if the database is closed.
+             if (!isopen) return;
+
+             try {
+
+                 // Create a PreparedStatement for the query.
+                 sql = "Select Store.ID, Store.Sname, " +
+                    "Store.MaName, Store.MaLname, " + "Supplier.City, Supplier.State, " +
+                    "Product.Pname, Product.In_stock " + "FROM Store " + 
+                    "INNER JOIN Supplier ON Store.Supplier = Supplier.ID " +
+                    "INNER JOIN Info ON Store.ID = Info.Store " +
+                    "INNER JOIN Product ON Product.ID = Info.Product " +
+                    "Where Product.In_stock = ?";
+                
+                 stmt = conn.prepareStatement(sql);
+
+                 // Read the parameters from the user.
+                 System.out.printf("Products In the store or not in the store (yes/no)? ");
+                 first = kbd.next();
+
+                 // Set the parameters in the statement.
+                 stmt.setString(1, first);
+
+                 // Execute the query and obtain the result set.
+                 rset = stmt.executeQuery();
+
+                 // Print the matching employees.
+                 System.out.printf("%n");
+                 System.out.printf(
+                  "Id             Store         Manager name    Manager last name     City           State          Product            Stock%n"
+                 );
+                 while (rset.next()) {
+                     id = rset.getInt(1);
+                     Store = rset.getString(2);
+                     Maname = rset.getString(3);
+                     MaLname = rset.getString(4);
+                     City = rset.getString(5);
+                     State = rset.getString(6);
+                     Product = rset.getString(7);
+                     first = rset.getString(8);
+                     System.out.printf("%-11d  %-17s  %-14s  %-14s  %-15s  %-14s  %-18s  %-12s%n",
+                         id, Store, Maname, MaLname, City, State, Product, first);
+                 }
+
+             } catch (Exception e) {}
+
+             // Close the query statement and return.
+             try {stmt.close();}
+             catch (Exception e) {}
+         }
+
+        // Update the salary of one employee.
+         public void doUpdate(Scanner kbd) {
+             PreparedStatement stmt = null;
+             String sql, first;
+             int id;
+
+             // Return if the database is closed.
+             if (!isopen) return;
+
+             try {
+
+                 // Create a PreparedStatement for the update.
+                 sql = "UPDATE Product SET In_stock = ? WHERE Id = ?";
+                 stmt = conn.prepareStatement(sql);
+
+                 // Read the parameters from the user.
+                 System.out.printf("Product Id? ");
+                 id = kbd.nextInt();
+                 System.out.printf("availability (yes/no)? ");
+                 first = kbd.next();
+
+                 // Set the parameters in the statement.
+                 stmt.setString(1,first );
+                 stmt.setInt(2, id);
+
+                 // Execute the update.
+                 stmt.executeUpdate();
+
+             } catch (Exception e) {}
+
+             // Close the update statement and return.
+             try {stmt.close();}
+             catch (Exception e) {}
+         }
+     }
