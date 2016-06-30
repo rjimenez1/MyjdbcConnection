@@ -1,0 +1,78 @@
+# MyjdbcConnection
+
+-- Program5.sql
+--
+-- Written by Raul Jimenez for Computer Science 415
+--
+-- This script populates a simple JavaDB database of poducts if available
+-- are provided by the stores, and locating the place of the store.
+
+CONNECT 'jdbc:derby:program5';
+
+CREATE TABLE Product (
+  ID int,
+  Pname varchar(25),
+  In_stock varchar(10),
+  PRIMARY key(ID)
+);
+
+INSERT INTO Product VALUES
+  (10, 'Tongue3D', 'yes'), 
+  (11, 'ViciousEngine2', 'yes'), 
+  (12, 'BigworldTechnology', 'no'),
+  (13, 'VisionEngine7', 'yes'), 
+  (14, 'InfernalEngine', 'no'),
+  (15, 'BlitzTech', 'no'),
+  (16, 'Unity3D', 'no'), 
+  (17, 'CryENGINE3', 'yes'),
+  (18, 'GamebryoLightspeed', 'yes'), 
+  (19, 'UnrealEngine3', 'no');
+
+CREATE TABLE Store (
+  ID int,
+  Sname varchar(15),
+  MaName varchar(15),
+  MaLname varchar(15),
+  Product int REFERENCES Product(ID),
+  PRIMARY KEY(ID)
+);
+
+INSERT INTO Store VALUES
+  (101, 'GameStop', 'Matthew', 'Thomas', 10),
+  (102, 'TimeCapsule', 'Chris', 'Defazio', 18),
+  (103, 'Crisloid', 'Shaylin', 'Gruslin', 16),
+  (104, 'Redbox', 'Rafael', 'Andre', 13),
+  (105, 'Toystore', 'Raul', 'Jimenez', 11),
+  (106, 'GameStop', 'Pedro', 'Martinez', 19),
+  (107, 'TimeCapsule', 'Manti', 'Fray', 12),
+  (108, 'Crisloid', 'Marie', 'Yay', 14),
+  (109, 'Redbox', 'Skylar', 'Daniels', 17),
+  (110, 'Toystore', 'Sam', 'James', 15);
+
+CREATE TABLE Supplier (
+  ID int,
+  City varchar(15),
+  State varchar(15),
+  PRIMARY KEY(ID)
+);
+
+INSERT INTO Supplier Values
+  (500, 'Providence', 'Rhode_Island'),
+  (501, 'Montgomery', 'Alabama'),
+  (502, 'Indianapolis', 'Indiana'),
+  (503, 'Columbia', 'South_Carolina'),
+  (504, 'Austin', 'Texas');
+
+CREATE TABLE Info (
+ Store int REFERENCES Store(ID),
+ product int REFERENCES product(ID)
+);
+
+INSERT INTO Info VALUES
+   (102, 10), 
+   (104, 11), 
+   (106, 13),
+   (108, 16), 
+   (109, 17),
+   (110, 18),
+   (101, 15);
